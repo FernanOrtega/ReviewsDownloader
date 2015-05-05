@@ -9,7 +9,7 @@ import java.nio.charset.Charset;
 import java.util.List;
 
 public class UtilFiles {
-    public static void saveToCSV(String fileLocation, String fileName, List<String[]> lstBlogPost)
+    public static void saveToCSV(String fileLocation, String fileName, List<String[]> lstRows)
             throws IOException {
         File f = new File(fileLocation);
         if (!f.exists() && !f.mkdirs()) {
@@ -18,7 +18,7 @@ public class UtilFiles {
         CSVWriter csvWriter = new CSVWriter(
                 new FileWriterWithEncoding(fileLocation+"/"+fileName+".csv",
                         Charset.forName("UTF-8")), ';');
-        csvWriter.writeAll(lstBlogPost);
+        csvWriter.writeAll(lstRows);
         csvWriter.flush();
         csvWriter.close();
 
