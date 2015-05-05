@@ -13,7 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class DownloaderAmazon extends AbstractDownloader {
+public class AmazonDownloader extends AbstractDownloader {
 
     private static final int TIMEOUT = 30000;
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2";

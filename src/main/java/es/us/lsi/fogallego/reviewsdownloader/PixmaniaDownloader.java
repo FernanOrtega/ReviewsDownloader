@@ -12,7 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class DownloaderDooyoo extends AbstractDownloader {
+public class PixmaniaDownloader extends AbstractDownloader {
 
     private static final int TIMEOUT = 30000;
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2";
@@ -32,27 +32,16 @@ public class DownloaderDooyoo extends AbstractDownloader {
                 try {
                     Document doc = Jsoup.connect(urlPage).userAgent(USER_AGENT).timeout(TIMEOUT).get();
                     // Name, UrlReviews
-                    Elements elements = doc.select("table.ptProdList tr.product");
+                    Elements elements = doc.select("p.productReviews a");
                     if (elements.size() == 0) {
                         break;
                     }
                     for (Element e : elements) {
-                        String itemName = e.select("div[id^=label-] ").text();
+                        String itemName = e.attr("title");
                         System.out.println(itemName);
-                        String itemReviewsUrl = source.getSiteUrl() + e.select("a[style]").attr("href");
+                        String itemReviewsUrl = e.attr("href");
                         if (!setItemId.contains(itemName)) {
-                            List<String[]> lstReviewsAux;
-                            String itemReviewsUrlAux = itemReviewsUrl;
-                            int offset = 1;
-                            do {
-                                lstReviewsAux = downloadItemReviews(source, itemName, itemReviewsUrlAux);
-                                lstReviews.addAll(lstReviewsAux);
-                                if (itemReviewsUrlAux.contains("#rev")) {
-                                    break;
-                                }
-                                itemReviewsUrlAux = itemReviewsUrl + offset + "/";
-                                offset++;
-                            } while (lstReviewsAux.size() > 0);
+                            lstReviews.addAll(downloadItemReviews(source, itemName, itemReviewsUrl));
                             setItemId.add(itemName);
                         }
                         productOffset++;
@@ -75,27 +64,28 @@ public class DownloaderDooyoo extends AbstractDownloader {
         return lstReviews;
     }
 
-    // We download only the first page of reviews
     private List<String[]> downloadItemReviews(Source source, String itemName, String itemReviewsUrl) throws IOException {
 
         List<String[]> lstReviews = new ArrayList<String[]>();
-        Document docHubReviews = Jsoup.connect(itemReviewsUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
-        Elements reviewsUrl = docHubReviews.select("p.review.description a[href]");
-        for (Element reviewUrl : reviewsUrl) {
-
-            String absoluteReviewUrl = source.getSiteUrl() + reviewUrl.attr("href");
-            Document docReview = Jsoup.connect(absoluteReviewUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
+        System.out.println(itemReviewsUrl);
+        Document docReviews = Jsoup.connect(itemReviewsUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
+        String category = docReviews.select("div.breadcrumb").text().replace(itemName, "");
+        category = category.substring(0, category.lastIndexOf("|"));
+        Elements reviews = docReviews.select("div.bv-content-core");
+        for (Element review : reviews) {
             //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
             String[] detail = new String[8];
-            detail[0] = absoluteReviewUrl;
+            detail[0] = itemReviewsUrl;
             detail[1] = itemName;
-            detail[2] = docReview.select("div.breadCrumbs").text().split(itemName)[0];
-            detail[3] = absoluteReviewUrl;
-            detail[4] = docReview.select("div.description").text();
-            detail[5] = docReview.select("div.rating span.value-title").attr("title");
-            Elements divContentP = docReview.select("div#content > p");
-            detail[6] = divContentP.get(0).text().replace("Ventajas: ", "");
-            detail[7] = divContentP.get(1).text().replace("Desventajas: ", "");
+            detail[2] = category;
+            detail[3] = itemReviewsUrl;
+            detail[4] = review.select("div.bv-content-summary-body-text").text();
+            detail[5] = review.select("span.bv-content-rating meta[itemprop=ratingvalue]").attr("ratingValue");
+            Elements divContentP = review.select("div.bv-content-product-questions > dl");
+            if (divContentP.size() > 0) {
+                detail[6] = divContentP.get(1).text().replace("Inconveniente ", "");
+                detail[7] = divContentP.get(0).text().replace("Ventaja ", "");
+            }
 
             lstReviews.add(detail);
         }

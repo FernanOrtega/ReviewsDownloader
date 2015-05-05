@@ -1,27 +1,17 @@
 package es.us.lsi.fogallego.reviewsdownloader;
 
-import au.com.bytecode.opencsv.CSVWriter;
-import com.esotericsoftware.yamlbeans.YamlException;
-import com.esotericsoftware.yamlbeans.YamlReader;
-import org.apache.commons.io.output.FileWriterWithEncoding;
-import org.apache.commons.validator.routines.UrlValidator;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DownloaderCiao extends AbstractDownloader {
+public class CiaoDownloader extends AbstractDownloader {
 
     public static final int OFFSET_STEP = 15;
     public static final int OFFSET_LIMIT = 100;
