@@ -15,8 +15,6 @@ import java.util.Set;
 
 public class AmazonDownloader extends AbstractDownloader {
 
-    private static final int TIMEOUT = 30000;
-    private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2";
     private static final int OFFSET_LIMIT = 30;
     public static final String REVIEWS_URL = "product-reviews/";
     public static final String ITEM_ID_SELECTOR_1 = "name";

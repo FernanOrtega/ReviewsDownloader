@@ -14,8 +14,6 @@ import java.util.Set;
 
 public class DooyooDownloader extends AbstractDownloader {
 
-    private static final int TIMEOUT = 30000;
-    private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2";
     private static final int OFFSET_LIMIT = 30;
 
     @Override
@@ -64,7 +62,7 @@ public class DooyooDownloader extends AbstractDownloader {
                         break;
                     }
                 } catch (IOException e) {
-                    System.err.println("Error while trying to retrieve results from Amazon: " + e.getMessage());
+                    System.err.println("Error while trying to retrieve results from Dooyoo: " + e.getMessage());
                     break;
                 }
 
