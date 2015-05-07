@@ -1,11 +1,10 @@
 package es.us.lsi.fogallego.reviewsdownloader;
 
 import com.esotericsoftware.yamlbeans.YamlException;
-import com.esotericsoftware.yamlbeans.YamlReader;
+import es.us.lsi.fogallego.reviewsdownloader.utils.UtilFiles;
 import org.apache.commons.validator.routines.UrlValidator;
 
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +25,7 @@ public abstract class AbstractDownloader {
             lstReviewsToCsv.addAll(extractFromSource(source, categorySource));
             System.out.println("Num reviews: "+(lstReviewsToCsv.size() - 1));
             try {
-                UtilFiles.saveToCSV(source.getFolderOut()+categorySource.getCategory()+"\\"+ source.getSite() + "/datasets", String.valueOf(System.currentTimeMillis()), lstReviewsToCsv);
+                UtilFiles.saveToCSV(source.getFolderOut() + categorySource.getCategory() + "\\" + source.getSite() + "/datasets", String.valueOf(System.currentTimeMillis()), lstReviewsToCsv);
             } catch (IOException e) {
                 System.err.println(e.getMessage());
             }

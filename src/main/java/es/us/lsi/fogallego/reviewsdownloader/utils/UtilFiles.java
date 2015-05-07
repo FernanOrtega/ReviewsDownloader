@@ -1,4 +1,4 @@
-package es.us.lsi.fogallego.reviewsdownloader;
+package es.us.lsi.fogallego.reviewsdownloader.utils;
 
 import au.com.bytecode.opencsv.CSVWriter;
 import org.apache.commons.io.output.FileWriterWithEncoding;
