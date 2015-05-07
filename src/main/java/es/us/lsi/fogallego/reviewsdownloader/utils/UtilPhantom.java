@@ -12,7 +12,6 @@ public class UtilPhantom {
     private final static long GLOBAL_WAIT_TIME = 100000l;
 
     static {
-        // Desactivamos los logger innecesarios
         java.util.logging.Logger.getLogger("org.openqa.selenium").setLevel(Level.OFF);
         java.util.logging.Logger.getLogger(PhantomJSDriverService.class.getName()).setLevel(Level.OFF);
     }
@@ -20,7 +19,6 @@ public class UtilPhantom {
     public static String getCompleteHtmlPage(String url) {
         String html = null;
         DesiredCapabilities dCaps = new DesiredCapabilities();
-        // No funciona un carajo esto. Sigue logueando cosas. Pero menos
         String[] phantomArgs = new String[]{"--webdriver-loglevel=ERROR"};
         dCaps.setJavascriptEnabled(true);
         dCaps.setCapability(PhantomJSDriverService.PHANTOMJS_CLI_ARGS, phantomArgs);
