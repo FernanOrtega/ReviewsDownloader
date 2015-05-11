@@ -1,6 +1,5 @@
 package es.us.lsi.fogallego.reviewsdownloader;
 
-import es.us.lsi.fogallego.reviewsdownloader.utils.UtilPhantom;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -13,7 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class ElcorteinglesDownloader extends AbstractDownloader {
+public class ZavviDownloader extends AbstractDownloader {
 
     private static final int OFFSET_LIMIT = 30;
 
@@ -25,31 +24,27 @@ public class ElcorteinglesDownloader extends AbstractDownloader {
             System.out.println("-- Extracting from: " + hubUrl);
 
             String urlPage = hubUrl;
+            int numPage = 1;
             do {
                 // Each page
                 try {
                     Document doc = Jsoup.connect(urlPage).userAgent(USER_AGENT).timeout(TIMEOUT).get();
                     // Name, UrlReviews
-                    Elements elements = doc.select("div.BVRRSProductsInfo div[id^=BVRRSExternalProductData]");
+                    Elements elements = doc.select("div.productlist div.item");
                     if (elements.size() == 0) {
                         break;
                     }
                     for (Element e : elements) {
-                        Element titleAndName = e.select("div.BVRRSExternalSubjectTitle.BVRRSExternalProductTitle a").first();
-                        String itemName = titleAndName.attr("title");
+                        String itemName = e.select("p.product-name a").attr("title");
                         System.out.println(itemName);
-                        String itemUrl = titleAndName.attr("href");
+                        String itemUrl = e.select("p.product-name a").attr("href");
                         if (!setItemId.contains(itemName)) {
                             lstReviews.addAll(downloadItemReviews(source, itemName, itemUrl));
                             setItemId.add(itemName);
                         }
                     }
-                    Element next = doc.select("span.BVRRPageLink.BVRRNextPage > a[title=siguiente]").first();
-                    if (next != null) {
-                        urlPage = next.attr("href");
-                    } else {
-                        break;
-                    }
+                    numPage++;
+                    urlPage = hubUrl + "?pageNumber=" + numPage;
                 } catch (HttpStatusException e) {
                     if (e.getStatusCode() == 404) {
                         System.err.println("Pages finished!, exit loop.");
@@ -67,13 +62,15 @@ public class ElcorteinglesDownloader extends AbstractDownloader {
         return lstReviews;
     }
 
-    private List<String[]> downloadItemReviews(Source source, String itemName, String itemUrl) {
+    private List<String[]> downloadItemReviews(Source source, String itemName, String itemUrl) throws IOException {
 
         List<String[]> lstReviews = new ArrayList<String[]>();
-        String html = UtilPhantom.getCompleteHtmlPage(itemUrl);
-        Document document = Jsoup.parse(html);
-        String category = document.select("div.BVRRSCategoryBreadcrumbNav").text().replace("P�gina principal de opiniones > ", "");
-        Elements elements = document.select("div[id^=BVRRDisplayContentReviewID_]");
+//        String html = UtilPhantom.getCompleteHtmlPage(itemUrl);
+//        Document document = Jsoup.parse(html);
+        Document document = Jsoup.connect(itemUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
+        String category = itemUrl.replace(source.getSiteUrl(), "");
+        Elements elements = document.select("div.review-content div.review-block");
+        System.out.println(itemUrl + " -> " + elements.size());
         for (Element e : elements) {
             //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
             String[] detail = new String[8];
@@ -81,10 +78,10 @@ public class ElcorteinglesDownloader extends AbstractDownloader {
             detail[1] = itemName;
             detail[2] = category;
             detail[3] = itemUrl;
-            detail[4] = e.select("div.BVRRReviewDisplayStyle5Text").text();
-            detail[5] = e.select("div.BVRRRatingNormalImage img").attr("title").replace(" de 5", "");
-            detail[6] = e.select("span.BVRRValue.BVRRReviewProTags") != null ? e.select("span.BVRRValue.BVRRReviewProTags").text() : "";
-            detail[7] = e.select("span.BVRRValue.BVRRReviewConTags") != null ? e.select("span.BVRRValue.BVRRReviewConTags").text() : "";
+            detail[4] = e.select("p.review-description").text();
+            detail[5] = e.select("div.rating-holder span.rating-stars").text();
+            detail[6] = "";
+            detail[7] = "";
 
             lstReviews.add(detail);
         }

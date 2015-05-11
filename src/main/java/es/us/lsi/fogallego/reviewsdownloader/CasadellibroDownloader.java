@@ -13,7 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class ElcorteinglesDownloader extends AbstractDownloader {
+public class CasadellibroDownloader extends AbstractDownloader {
 
     private static final int OFFSET_LIMIT = 30;
 
@@ -30,23 +30,23 @@ public class ElcorteinglesDownloader extends AbstractDownloader {
                 try {
                     Document doc = Jsoup.connect(urlPage).userAgent(USER_AGENT).timeout(TIMEOUT).get();
                     // Name, UrlReviews
-                    Elements elements = doc.select("div.BVRRSProductsInfo div[id^=BVRRSExternalProductData]");
+                    Elements elements = doc.select("div.mod-list-item div.txt");
                     if (elements.size() == 0) {
                         break;
                     }
                     for (Element e : elements) {
-                        Element titleAndName = e.select("div.BVRRSExternalSubjectTitle.BVRRSExternalProductTitle a").first();
-                        String itemName = titleAndName.attr("title");
+                        Element titleAndName = e.select("a[id^=resultListadoCategoriaLibros]").first();
+                        String itemName = titleAndName.text();
                         System.out.println(itemName);
-                        String itemUrl = titleAndName.attr("href");
+                        String itemUrl = source.getSiteUrl() + titleAndName.attr("href");
                         if (!setItemId.contains(itemName)) {
                             lstReviews.addAll(downloadItemReviews(source, itemName, itemUrl));
                             setItemId.add(itemName);
                         }
                     }
-                    Element next = doc.select("span.BVRRPageLink.BVRRNextPage > a[title=siguiente]").first();
+                    Element next = doc.select("a.gonext").first();
                     if (next != null) {
-                        urlPage = next.attr("href");
+                        urlPage = source.getSiteUrl() + next.attr("href");
                     } else {
                         break;
                     }
@@ -67,13 +67,25 @@ public class ElcorteinglesDownloader extends AbstractDownloader {
         return lstReviews;
     }
 
-    private List<String[]> downloadItemReviews(Source source, String itemName, String itemUrl) {
+    private List<String[]> downloadItemReviews(Source source, String itemName, String itemUrl) throws IOException {
 
         List<String[]> lstReviews = new ArrayList<String[]>();
-        String html = UtilPhantom.getCompleteHtmlPage(itemUrl);
-        Document document = Jsoup.parse(html);
-        String category = document.select("div.BVRRSCategoryBreadcrumbNav").text().replace("P�gina principal de opiniones > ", "");
-        Elements elements = document.select("div[id^=BVRRDisplayContentReviewID_]");
+//        String reviewsUrl = docItem.select("div.list-opinion a.more").attr("href");
+        String reviewsUrl = itemUrl.replace(source.getSiteUrl(), source.getSiteUrl() + "/opiniones-libro");
+        System.out.println(reviewsUrl);
+        String html = UtilPhantom.getCompleteHtmlPage(reviewsUrl);
+//        Document docReviews = Jsoup.connect(reviewsUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
+        Document docReviews = Jsoup.parse(html);
+        Elements elemsCategory = docReviews.select("div#breadcrumbs ul.bread li");
+        elemsCategory.remove(0);
+        elemsCategory.remove(elemsCategory.size() - 1);
+
+        String category = "";
+        for (Element elemCategory : elemsCategory) {
+            category += elemCategory.text() + " > ";
+        }
+        category = category.substring(0, category.lastIndexOf(" > "));
+        Elements elements = docReviews.select("div.list-opinion div.list-publications-item-content-actions");
         for (Element e : elements) {
             //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
             String[] detail = new String[8];
@@ -81,10 +93,10 @@ public class ElcorteinglesDownloader extends AbstractDownloader {
             detail[1] = itemName;
             detail[2] = category;
             detail[3] = itemUrl;
-            detail[4] = e.select("div.BVRRReviewDisplayStyle5Text").text();
-            detail[5] = e.select("div.BVRRRatingNormalImage img").attr("title").replace(" de 5", "");
-            detail[6] = e.select("span.BVRRValue.BVRRReviewProTags") != null ? e.select("span.BVRRValue.BVRRReviewProTags").text() : "";
-            detail[7] = e.select("span.BVRRValue.BVRRReviewConTags") != null ? e.select("span.BVRRValue.BVRRReviewConTags").text() : "";
+            detail[4] = e.select("p.smaller").text();
+            detail[5] = "";
+            detail[6] = "";
+            detail[7] = "";
 
             lstReviews.add(detail);
         }
