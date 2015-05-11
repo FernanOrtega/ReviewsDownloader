@@ -7,6 +7,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,7 @@ public class CiaoDownloader extends AbstractDownloader {
             System.out.println("-- Extracting from: " + hubUrl);
             mapReviews.putAll(extractFromCiao(hubUrl, categorySource.getCategory(), source.getFolderOut()));
         }
-        return (List<String[]>) mapReviews.values();
+        return new ArrayList<String[]>(mapReviews.values());
     }
 
     private static Map<String,String[]> extractFromCiao(String hubUrl, String category, String folder) {

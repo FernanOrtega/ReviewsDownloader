@@ -76,15 +76,7 @@ public class CasadellibroDownloader extends AbstractDownloader {
         String html = UtilPhantom.getCompleteHtmlPage(reviewsUrl);
 //        Document docReviews = Jsoup.connect(reviewsUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
         Document docReviews = Jsoup.parse(html);
-        Elements elemsCategory = docReviews.select("div#breadcrumbs ul.bread li");
-        elemsCategory.remove(0);
-        elemsCategory.remove(elemsCategory.size() - 1);
-
-        String category = "";
-        for (Element elemCategory : elemsCategory) {
-            category += elemCategory.text() + " > ";
-        }
-        category = category.substring(0, category.lastIndexOf(" > "));
+        String category = getCategory(docReviews);
         Elements elements = docReviews.select("div.list-opinion div.list-publications-item-content-actions");
         for (Element e : elements) {
             //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
@@ -102,5 +94,22 @@ public class CasadellibroDownloader extends AbstractDownloader {
         }
 
         return lstReviews;
+    }
+
+    private String getCategory(Document docReviews) {
+        Elements elemsCategory = docReviews.select("div#breadcrumbs ul.bread li");
+        String category = "";
+        if (elemsCategory.size() > 2) {
+            elemsCategory.remove(0);
+            elemsCategory.remove(elemsCategory.size() - 1);
+
+            for (Element elemCategory : elemsCategory) {
+                category += elemCategory.text() + " > ";
+            }
+            category = category.substring(0, category.lastIndexOf(" > "));
+        } else {
+            category = elemsCategory.text();
+        }
+        return category;
     }
 }
