@@ -13,8 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class CasadellibroDownloader extends AbstractDownloader {
-
+public class HotelescomDownloader extends AbstractDownloader {
     private static final int OFFSET_LIMIT = 30;
 
     @Override
@@ -30,21 +29,19 @@ public class CasadellibroDownloader extends AbstractDownloader {
                 try {
                     Document doc = Jsoup.connect(urlPage).userAgent(USER_AGENT).timeout(TIMEOUT).get();
                     // Name, UrlReviews
-                    Elements elements = doc.select("div.mod-list-item div.txt");
+                    Elements elements = doc.select("div.result.extended_result.inner_hotel");
                     if (elements.size() == 0) {
                         break;
                     }
                     for (Element e : elements) {
-                        Element titleAndName = e.select("a[id^=resultListadoCategoriaLibros]").first();
-                        String itemName = titleAndName.text();
-                        System.out.println(itemName);
-                        String itemUrl = source.getSiteUrl() + titleAndName.attr("href");
+                        String itemName = e.select("div.details h3 a").text();
+                        String itemUrl = e.select("div.details h3 a").attr("href");
                         if (!setItemId.contains(itemName)) {
                             lstReviews.addAll(downloadItemReviews(source, itemName, itemUrl));
                             setItemId.add(itemName);
                         }
                     }
-                    Element next = doc.select("a.gonext").first();
+                    Element next = doc.select("a.lnk_nextPage").first();
                     if (next != null) {
                         urlPage = source.getSiteUrl() + next.attr("href");
                     } else {
@@ -56,7 +53,7 @@ public class CasadellibroDownloader extends AbstractDownloader {
                         break;
                     }
                 } catch (IOException e) {
-                    System.err.println("Error while trying to retrieve results from Casa del libro: " + e.getMessage());
+                    System.err.println("Error while trying to retrieve results from Hotelescom: " + e.getMessage());
                     break;
                 }
 
@@ -70,14 +67,14 @@ public class CasadellibroDownloader extends AbstractDownloader {
     private List<String[]> downloadItemReviews(Source source, String itemName, String itemUrl) throws IOException {
 
         List<String[]> lstReviews = new ArrayList<String[]>();
-//        String reviewsUrl = docItem.select("div.list-opinion a.more").attr("href");
-        String reviewsUrl = itemUrl.replace(source.getSiteUrl(), source.getSiteUrl() + "/opiniones-libro");
+        Document docItem = Jsoup.connect(itemUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
+        String reviewsUrl = source.getSiteUrl() + docItem.select("a.total-reviews").attr("href");
         System.out.println(reviewsUrl);
         String html = UtilPhantom.getCompleteHtmlPage(reviewsUrl);
 //        Document docReviews = Jsoup.connect(reviewsUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
         Document docReviews = Jsoup.parse(html);
         String category = getCategory(docReviews);
-        Elements elements = docReviews.select("div.list-opinion div.list-publications-item-content-actions");
+        Elements elements = docReviews.select("div.review-card");
         for (Element e : elements) {
             //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
             String[] detail = new String[8];
@@ -85,8 +82,8 @@ public class CasadellibroDownloader extends AbstractDownloader {
             detail[1] = itemName;
             detail[2] = category;
             detail[3] = itemUrl;
-            detail[4] = e.select("p.smaller").text();
-            detail[5] = "";
+            detail[4] = e.select("blockquote.expandable-content").text();
+            detail[5] = e.select("span.rating").text().replace(" / 5", "");
             detail[6] = "";
             detail[7] = "";
 
@@ -97,10 +94,9 @@ public class CasadellibroDownloader extends AbstractDownloader {
     }
 
     private String getCategory(Document docReviews) {
-        Elements elemsCategory = docReviews.select("div#breadcrumbs ul.bread li");
+        Elements elemsCategory = docReviews.select("ul#breadcrumb li");
         String category = "";
-        if (elemsCategory.size() > 2) {
-            elemsCategory.remove(0);
+        if (elemsCategory.size() > 1) {
             elemsCategory.remove(elemsCategory.size() - 1);
 
             for (Element elemCategory : elemsCategory) {
