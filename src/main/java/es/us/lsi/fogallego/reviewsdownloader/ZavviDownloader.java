@@ -1,5 +1,6 @@
 package es.us.lsi.fogallego.reviewsdownloader;
 
+import es.us.lsi.fogallego.reviewsdownloader.utils.UtilFiles;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -7,14 +8,11 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class ZavviDownloader extends AbstractDownloader {
 
-    private static final int OFFSET_LIMIT = 30;
+    private static final int OFFSET_LIMIT = 240;
 
     @Override
     protected List<String[]> extractFromSource(Source source, CategorySource categorySource) {
@@ -39,7 +37,7 @@ public class ZavviDownloader extends AbstractDownloader {
                         System.out.println(itemName);
                         String itemUrl = e.select("p.product-name a").attr("href");
                         if (!setItemId.contains(itemName)) {
-                            lstReviews.addAll(downloadItemReviews(source, itemName, itemUrl));
+                            lstReviews.addAll(downloadItemReviews(source, categorySource, itemName, itemUrl));
                             setItemId.add(itemName);
                         }
                     }
@@ -62,7 +60,7 @@ public class ZavviDownloader extends AbstractDownloader {
         return lstReviews;
     }
 
-    private List<String[]> downloadItemReviews(Source source, String itemName, String itemUrl) throws IOException {
+    private List<String[]> downloadItemReviews(Source source, CategorySource categorySource, String itemName, String itemUrl) throws IOException {
 
         List<String[]> lstReviews = new ArrayList<String[]>();
 //        String html = UtilPhantom.getCompleteHtmlPage(itemUrl);
@@ -73,17 +71,21 @@ public class ZavviDownloader extends AbstractDownloader {
         System.out.println(itemUrl + " -> " + elements.size());
         for (Element e : elements) {
             //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
-            String[] detail = new String[8];
-            detail[0] = itemUrl;
-            detail[1] = itemName;
-            detail[2] = category;
-            detail[3] = itemUrl;
-            detail[4] = e.select("p.review-description").text();
-            detail[5] = e.select("div.rating-holder span.rating-stars").text();
-            detail[6] = "";
+            String[] detail = new String[9];
+            detail[0] = UUID.randomUUID().toString();
+            detail[1] = itemUrl;
+            detail[2] = itemName;
+            detail[3] = category;
+            detail[4] = itemUrl;
+            detail[5] = e.select("p.review-description").text();
+            detail[6] = e.select("div.rating-holder span.rating-stars").text();
             detail[7] = "";
+            detail[8] = "";
 
             lstReviews.add(detail);
+
+            UtilFiles.saveHtmlFile(source.getFolderOut() + categorySource.getCategory() + "\\" + source.getSite() + "/html",
+                    detail[0], document.outerHtml());
         }
 
         return lstReviews;

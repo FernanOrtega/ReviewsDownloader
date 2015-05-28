@@ -19,7 +19,7 @@ public abstract class AbstractDownloader {
         for (CategorySource categorySource : source.getSources()) {
             System.out.println("-> Category: "+categorySource.getCategory());
             List<String[]> lstReviewsToCsv = new ArrayList<String[]>();
-            String[] header = {"url_item", "name", "category", "url_review", "text", "assessment",
+            String[] header = {"uuid", "url_item", "name", "category", "url_review", "text", "assessment",
                     "positive_opinion", "negative_opinion"};
             lstReviewsToCsv.add(header);
             lstReviewsToCsv.addAll(extractFromSource(source, categorySource));

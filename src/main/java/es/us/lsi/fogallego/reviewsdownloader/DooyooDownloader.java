@@ -1,5 +1,6 @@
 package es.us.lsi.fogallego.reviewsdownloader;
 
+import es.us.lsi.fogallego.reviewsdownloader.utils.UtilFiles;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -7,14 +8,11 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class DooyooDownloader extends AbstractDownloader {
 
-    private static final int OFFSET_LIMIT = 30;
+    private static final int OFFSET_LIMIT = 120;
 
     @Override
     protected List<String[]> extractFromSource(Source source, CategorySource categorySource) {
@@ -40,17 +38,8 @@ public class DooyooDownloader extends AbstractDownloader {
                         String itemReviewsUrl = source.getSiteUrl() + e.select("a[style]").attr("href");
                         if (!setItemId.contains(itemName)) {
                             List<String[]> lstReviewsAux;
-                            String itemReviewsUrlAux = itemReviewsUrl;
-                            int offset = 1;
-                            do {
-                                lstReviewsAux = downloadItemReviews(source, itemName, itemReviewsUrlAux);
-                                lstReviews.addAll(lstReviewsAux);
-                                if (itemReviewsUrlAux.contains("#rev")) {
-                                    break;
-                                }
-                                itemReviewsUrlAux = itemReviewsUrl + offset + "/";
-                                offset++;
-                            } while (lstReviewsAux.size() > 0);
+                            lstReviewsAux = downloadItemReviews(source, categorySource, itemName, itemReviewsUrl);
+                            lstReviews.addAll(lstReviewsAux);
                             setItemId.add(itemName);
                         }
                         productOffset++;
@@ -73,30 +62,52 @@ public class DooyooDownloader extends AbstractDownloader {
         return lstReviews;
     }
 
-    // We download only the first page of reviews
-    private List<String[]> downloadItemReviews(Source source, String itemName, String itemReviewsUrl) throws IOException {
+    private List<String[]> downloadItemReviews(Source source, CategorySource categorySource, String itemName, String itemReviewsUrl) throws IOException {
 
         List<String[]> lstReviews = new ArrayList<String[]>();
-        Document docHubReviews = Jsoup.connect(itemReviewsUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
-        Elements reviewsUrl = docHubReviews.select("p.review.description a[href]");
-        for (Element reviewUrl : reviewsUrl) {
 
-            String absoluteReviewUrl = source.getSiteUrl() + reviewUrl.attr("href");
-            Document docReview = Jsoup.connect(absoluteReviewUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
-            //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
-            String[] detail = new String[8];
-            detail[0] = absoluteReviewUrl;
-            detail[1] = itemName;
-            detail[2] = docReview.select("div.breadCrumbs").text().split(itemName)[0];
-            detail[3] = absoluteReviewUrl;
-            detail[4] = docReview.select("div.description").text();
-            detail[5] = docReview.select("div.rating span.value-title").attr("title");
-            Elements divContentP = docReview.select("div#content > p");
-            detail[6] = divContentP.get(0).text().replace("Ventajas: ", "");
-            detail[7] = divContentP.get(1).text().replace("Desventajas: ", "");
+        do {
 
-            lstReviews.add(detail);
-        }
+            Document docHubReviews = Jsoup.connect(itemReviewsUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
+            Elements reviewsUrl = docHubReviews.select("p.review.description a[href]");
+            for (Element reviewUrl : reviewsUrl) {
+
+                String absoluteReviewUrl = source.getSiteUrl() + reviewUrl.attr("href");
+                Document docReview = Jsoup.connect(absoluteReviewUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
+                //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
+                String[] detail = new String[9];
+                detail[0] = UUID.randomUUID().toString();
+                detail[1] = absoluteReviewUrl;
+                detail[2] = itemName;
+                detail[3] = docReview.select("div.breadCrumbs").text().split(itemName)[0];
+                detail[4] = absoluteReviewUrl;
+                detail[5] = docReview.select("div.description").text();
+                detail[6] = docReview.select("div.rating span.value-title").attr("title");
+                Elements divContentP = docReview.select("div#content > p");
+                detail[7] = divContentP.get(0).text().replace("Ventajas: ", "");
+                detail[8] = divContentP.get(1).text().replace("Desventajas: ", "");
+
+                lstReviews.add(detail);
+
+                UtilFiles.saveHtmlFile(source.getFolderOut() + categorySource.getCategory() + "\\" + source.getSite() + "/html",
+                        detail[0], docReview.outerHtml());
+            }
+
+
+            Elements current = docHubReviews.select("li#current");
+            System.out.println(itemReviewsUrl + " -> " + current.size());
+            if (current.size() > 0) {
+                Element elemNext = current.first().nextElementSibling();
+                if (elemNext != null) {
+                    itemReviewsUrl = source.getSiteUrl() + elemNext.select("a").attr("href");
+                } else {
+                    itemReviewsUrl = "";
+                }
+            } else {
+                itemReviewsUrl = "";
+            }
+
+        } while (!itemReviewsUrl.isEmpty() && lstReviews.size() < OFFSET_LIMIT);
 
         return lstReviews;
     }

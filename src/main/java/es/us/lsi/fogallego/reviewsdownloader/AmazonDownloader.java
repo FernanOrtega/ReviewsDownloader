@@ -1,6 +1,7 @@
 package es.us.lsi.fogallego.reviewsdownloader;
 
 import es.us.lsi.fogallego.reviewsdownloader.utils.Pair;
+import es.us.lsi.fogallego.reviewsdownloader.utils.UtilFiles;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -8,14 +9,11 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class AmazonDownloader extends AbstractDownloader {
 
-    private static final int OFFSET_LIMIT = 30;
+    private static final int OFFSET_LIMIT = 120;
     public static final String REVIEWS_URL = "product-reviews/";
     public static final String ITEM_ID_SELECTOR_1 = "name";
     public static final String ITEM_NAME_SELECTOR_1 = "h3";
@@ -45,7 +43,7 @@ public class AmazonDownloader extends AbstractDownloader {
                         String itemId = item.getFirst();
                         String itemName = item.getSecond();
                         if (!setItemId.contains(itemId)) {
-                            lstReviews.addAll(downloadItemReviews(source, itemName, itemId));
+                            lstReviews.addAll(downloadItemReviews(source, itemName, itemId, categorySource));
                             setItemId.add(itemId);
                         }
                         productOffset++;
@@ -90,38 +88,62 @@ public class AmazonDownloader extends AbstractDownloader {
             String itemId = e.attr(itemIdSelector);
             String itemName = e.select(itemNameSelector).text();
 
-            System.out.println(itemId + ": " + itemName);
-
             lstPairItemInfo.add(new Pair<String, String>(itemId, itemName));
         }
 
         return lstPairItemInfo;
     }
 
-    private List<String[]> downloadItemReviews(Source source, String itemName, String productId) throws IOException {
+    private List<String[]> downloadItemReviews(Source source, String itemName, String productId, CategorySource categorySource) throws IOException {
+
+        System.out.println(productId + ": " + itemName);
 
         String itemUrl = "http://www.amazon.es/dp/" + productId;
         Document docItem = Jsoup.connect(itemUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
         String itemCategory = docItem.select("div#wayfinding-breadcrumbs_feature_div").text();
+        if (itemCategory.isEmpty()) {
+            itemCategory = categorySource.getCategory();
+        }
         String itemReviewUrl = source.getSiteUrl() + "/" + REVIEWS_URL + productId;
 
         List<String[]> lstReview = new ArrayList<String[]>();
 
-        Document docReview = Jsoup.connect(itemReviewUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
-        Elements reviews = docReview.select("table#productReviews div[style^=margin-left]");
-        for (Element e : reviews) {
-            //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
-            String[] detail = new String[8];
-            detail[0] = itemUrl;
-            detail[1] = itemName;
-            detail[2] = itemCategory;
-            detail[3] = itemReviewUrl;
-            detail[4] = e.select("div.reviewText").text();
-            detail[5] = e.select("span.swSprite").text().split(" de un máximo de 5 estrellas")[0];
-            detail[6] = "";
-            detail[7] = "";
-            lstReview.add(detail);
-        }
+        do {
+
+            Document docReview = Jsoup.connect(itemReviewUrl).userAgent(USER_AGENT).timeout(TIMEOUT).get();
+            String html = docReview.outerHtml();
+            Elements reviews = docReview.select("table#productReviews div[style^=margin-left]");
+            for (Element e : reviews) {
+                //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
+                String[] detail = new String[9];
+                detail[0] = UUID.randomUUID().toString();
+                detail[1] = itemUrl;
+                detail[2] = itemName;
+                detail[3] = itemCategory;
+                detail[4] = itemReviewUrl;
+                detail[5] = e.select("div.reviewText").text();
+                detail[6] = e.select("span.swSprite").text().split(" de un máximo de 5 estrellas")[0];
+                detail[7] = "";
+                detail[8] = "";
+                lstReview.add(detail);
+
+                UtilFiles.saveHtmlFile(source.getFolderOut() + categorySource.getCategory() + "\\" + source.getSite() + "/html",
+                        detail[0], html);
+            }
+
+            Elements elemsNext = docReview.select("div.CMpaginate span.paging a");
+            if (elemsNext.size() > 0) {
+                Element elemNext = elemsNext.get(elemsNext.size() - 1);
+                if (elemNext.toString().contains("Siguiente")) {
+                    itemReviewUrl = elemNext.attr("href");
+                } else {
+                    itemReviewUrl = "";
+                }
+            } else {
+                itemReviewUrl = "";
+            }
+
+        } while (!itemReviewUrl.isEmpty() && lstReview.size() < OFFSET_LIMIT);
 
         return lstReview;
     }

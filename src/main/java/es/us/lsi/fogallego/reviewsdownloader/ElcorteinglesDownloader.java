@@ -1,5 +1,6 @@
 package es.us.lsi.fogallego.reviewsdownloader;
 
+import es.us.lsi.fogallego.reviewsdownloader.utils.UtilFiles;
 import es.us.lsi.fogallego.reviewsdownloader.utils.UtilPhantom;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
@@ -8,14 +9,11 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class ElcorteinglesDownloader extends AbstractDownloader {
 
-    private static final int OFFSET_LIMIT = 30;
+    private static final int OFFSET_LIMIT = 240;
 
     @Override
     protected List<String[]> extractFromSource(Source source, CategorySource categorySource) {
@@ -37,10 +35,9 @@ public class ElcorteinglesDownloader extends AbstractDownloader {
                     for (Element e : elements) {
                         Element titleAndName = e.select("div.BVRRSExternalSubjectTitle.BVRRSExternalProductTitle a").first();
                         String itemName = titleAndName.attr("title");
-                        System.out.println(itemName);
                         String itemUrl = titleAndName.attr("href");
                         if (!setItemId.contains(itemName)) {
-                            lstReviews.addAll(downloadItemReviews(source, itemName, itemUrl));
+                            lstReviews.addAll(downloadItemReviews(source, categorySource, itemName, itemUrl));
                             setItemId.add(itemName);
                         }
                     }
@@ -56,7 +53,7 @@ public class ElcorteinglesDownloader extends AbstractDownloader {
                         break;
                     }
                 } catch (IOException e) {
-                    System.err.println("Error while trying to retrieve results from Amazon: " + e.getMessage());
+                    System.err.println("Error while trying to retrieve results from ElCorteIngles: " + e.getMessage());
                     break;
                 }
 
@@ -67,27 +64,50 @@ public class ElcorteinglesDownloader extends AbstractDownloader {
         return lstReviews;
     }
 
-    private List<String[]> downloadItemReviews(Source source, String itemName, String itemUrl) {
+    private List<String[]> downloadItemReviews(Source source, CategorySource categorySource, String itemName, String itemUrl) throws IOException {
 
         List<String[]> lstReviews = new ArrayList<String[]>();
         String html = UtilPhantom.getCompleteHtmlPage(itemUrl);
         Document document = Jsoup.parse(html);
         String category = document.select("div.BVRRSCategoryBreadcrumbNav").text().replace("P�gina principal de opiniones > ", "");
-        Elements elements = document.select("div[id^=BVRRDisplayContentReviewID_]");
-        for (Element e : elements) {
-            //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
-            String[] detail = new String[8];
-            detail[0] = itemUrl;
-            detail[1] = itemName;
-            detail[2] = category;
-            detail[3] = itemUrl;
-            detail[4] = e.select("div.BVRRReviewDisplayStyle5Text").text();
-            detail[5] = e.select("div.BVRRRatingNormalImage img").attr("title").replace(" de 5", "");
-            detail[6] = e.select("span.BVRRValue.BVRRReviewProTags") != null ? e.select("span.BVRRValue.BVRRReviewProTags").text() : "";
-            detail[7] = e.select("span.BVRRValue.BVRRReviewConTags") != null ? e.select("span.BVRRValue.BVRRReviewConTags").text() : "";
 
-            lstReviews.add(detail);
-        }
+
+        do {
+
+            Elements elements = document.select("div[id^=BVRRDisplayContentReviewID_]");
+
+            System.out.println(itemName + " -> " + elements.size());
+
+            for (Element e : elements) {
+                //"url_item", "name", "category", "url_review", "text", "assessment","positive_opinion", "negative_opinion"
+                String[] detail = new String[9];
+                detail[0] = UUID.randomUUID().toString();
+                detail[1] = itemUrl;
+                detail[2] = itemName;
+                detail[3] = category;
+                detail[4] = itemUrl;
+                detail[5] = e.select("div.BVRRReviewDisplayStyle5Text").text();
+                detail[6] = e.select("div.BVRRRatingNormalImage img").attr("title").replace(" de 5", "");
+                detail[7] = e.select("span.BVRRValue.BVRRReviewProTags") != null ? e.select("span.BVRRValue.BVRRReviewProTags").text() : "";
+                detail[8] = e.select("span.BVRRValue.BVRRReviewConTags") != null ? e.select("span.BVRRValue.BVRRReviewConTags").text() : "";
+
+                lstReviews.add(detail);
+
+                UtilFiles.saveHtmlFile(source.getFolderOut() + categorySource.getCategory() + "\\" + source.getSite() + "/html",
+                        detail[0], html);
+            }
+
+            Elements elemsNext = document.select("span.BVRRPageLink BVRRPageNumber a[title=siguiente]");
+
+            if (elemsNext.size() == 0) {
+                document = null;
+            } else {
+                itemUrl = elemsNext.attr("href");
+                html = UtilPhantom.getCompleteHtmlPage(itemUrl);
+                document = Jsoup.parse(html);
+            }
+
+        } while (document != null);
 
         return lstReviews;
     }
